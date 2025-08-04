@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState(() => {
     try {
       const saved = localStorage.getItem('cartItems');
@@ -23,10 +24,12 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setLoading(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoading(false);
     });
 
     return () => {
@@ -69,13 +72,12 @@ export default function App() {
     localStorage.removeItem('cartItems');
   };
 
-  if (session === null) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <Router>
-      
       {session ? (
         <>
           <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -130,7 +132,6 @@ export default function App() {
 
           <main className="container mt-4">
             <Routes>
-              <Route path='/login' element={<Login/>}></Route>
               <Route path="/" element={<ProductList onAddToCart={handleAddToCart} />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route
