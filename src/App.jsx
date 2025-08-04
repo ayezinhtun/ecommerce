@@ -75,6 +75,7 @@ export default function App() {
 
   return (
     <Router>
+      
       {session ? (
         <>
           <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -129,6 +130,7 @@ export default function App() {
 
           <main className="container mt-4">
             <Routes>
+              <Route path='/login' element={<Login/>}></Route>
               <Route path="/" element={<ProductList onAddToCart={handleAddToCart} />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route
