@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -34,12 +34,11 @@ export default function App() {
     };
   }, []);
 
-  // Save cart to localStorage whenever cartItems change
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Add product or increase quantity
+  // Cart handlers
   const handleAddToCart = (product) => {
     setCartItems((prev) => {
       const exists = prev.find((p) => p.id === product.id);
@@ -52,12 +51,10 @@ export default function App() {
     });
   };
 
-  // Remove product from cart
   const handleRemoveFromCart = (id) => {
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Update product quantity
   const handleUpdateQuantity = (id, newQuantity) => {
     if (newQuantity < 1) return;
     setCartItems((prev) =>
@@ -67,106 +64,106 @@ export default function App() {
     );
   };
 
-  // Clear cart after successful order placement
   const handleOrderPlaced = () => {
     setCartItems([]);
     localStorage.removeItem('cartItems');
   };
 
-  if (!session)
-    return (
-      <Router>
+  if (session === null) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <Router>
+      {session ? (
+        <>
+          <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div className="container">
+              <Link className="navbar-brand" to="/">MyShop</Link>
+              <button
+                className="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarNav"
+                aria-controls="navbarNav"
+                aria-expanded="false"
+                aria-label="Toggle navigation"
+              >
+                <span className="navbar-toggler-icon"></span>
+              </button>
+
+              <div className="collapse navbar-collapse" id="navbarNav">
+                <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/">Home</Link>
+                  </li>
+
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/cart">
+                      Cart{' '}
+                      <span className="badge bg-light text-primary">
+                        {cartItems.reduce((total, item) => total + item.quantity, 0)}
+                      </span>
+                    </Link>
+                  </li>
+
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/orders">Orders</Link>
+                  </li>
+                </ul>
+
+                <button
+                  className="btn btn-outline-light"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setSession(null);
+                    setCartItems([]);
+                    localStorage.removeItem('cartItems');
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          <main className="container mt-4">
+            <Routes>
+              <Route path="/" element={<ProductList onAddToCart={handleAddToCart} />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/cart"
+                element={
+                  <>
+                    <Cart
+                      cartItems={cartItems}
+                      onRemove={handleRemoveFromCart}
+                      onUpdateQuantity={handleUpdateQuantity}
+                    />
+                    <Checkout
+                      cartItems={cartItems}
+                      user={session.user}
+                      onOrderPlaced={handleOrderPlaced}
+                    />
+                  </>
+                }
+              />
+              <Route path="/orders" element={<Orders user={session.user} />} />
+              {/* Redirect unknown paths to home */}
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </main>
+        </>
+      ) : (
         <div className="container mt-5">
           <Routes>
             <Route path="/login" element={<Login onLogin={setSession} />} />
             <Route path="/signup" element={<Signup onSignup={setSession} />} />
+            {/* Redirect unknown paths to login */}
+            <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
         </div>
-      </Router>
-    );
-
-  return (
-    <Router>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div className="container">
-          <Link className="navbar-brand" to="/">
-            MyShop
-          </Link>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-              <li className="nav-item">
-                <Link className="nav-link" to="/">
-                  Home
-                </Link>
-              </li>
-
-              <li className="nav-item">
-                <Link className="nav-link" to="/cart">
-                  Cart{' '}
-                  <span className="badge bg-light text-primary">
-                    {cartItems.reduce((total, item) => total + item.quantity, 0)}
-                  </span>
-                </Link>
-              </li>
-
-              <li className="nav-item">
-                <Link className="nav-link" to="/orders">
-                  Orders
-                </Link>
-              </li>
-            </ul>
-
-            <button
-              className="btn btn-outline-light"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setSession(null);
-                setCartItems([]);
-                localStorage.removeItem('cartItems');
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="container mt-4">
-        <Routes>
-          <Route path="/" element={<ProductList onAddToCart={handleAddToCart} />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route
-            path="/cart"
-            element={
-              <>
-                <Cart
-                  cartItems={cartItems}
-                  onRemove={handleRemoveFromCart}
-                  onUpdateQuantity={handleUpdateQuantity}
-                />
-                <Checkout
-                  cartItems={cartItems}
-                  user={session.user}
-                  onOrderPlaced={handleOrderPlaced}
-                />
-              </>
-            }
-          />
-          <Route path="/orders" element={<Orders user={session.user} />} />
-        </Routes>
-      </main>
+      )}
     </Router>
   );
 }
