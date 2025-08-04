@@ -8,6 +8,11 @@ import Cart from './components/Cart';
 import Checkout from './components/Checkout';
 import Orders from './pages/Order';
 import Dashboard from './pages/Dashboard';
+import AuditLogs from './pages/AuditLog';
+import useNotifications from './utils/useNotification';
+import NotificationBell from './utils/NotificationBell'; 
+import NotificationsPage from './pages/Notifications';
+
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -72,9 +77,13 @@ export default function App() {
     localStorage.removeItem('cartItems');
   };
 
+  const notifications = useNotifications(session?.user?.id || '');
+
   if (loading) {
     return <div>Loading...</div>;
   }
+
+
 
   return (
     <Router>
@@ -113,6 +122,13 @@ export default function App() {
                   <li className="nav-item">
                     <Link className="nav-link" to="/orders">Orders</Link>
                   </li>
+                   <li className="nav-item">
+                    <Link className="nav-link" to="/audit">Audit Logs</Link>
+                  </li>
+                  <li className="nav-item">
+                  <NotificationBell notifications={notifications} />
+                </li>
+
                 </ul>
 
                 <button
@@ -152,6 +168,9 @@ export default function App() {
                 }
               />
               <Route path="/orders" element={<Orders user={session.user} />} />
+                <Route path="/audit" element={<AuditLogs user={session.user}/>} />
+                <Route path="/notifications" element={<NotificationsPage notifications={notifications}  user={session.user}/>} />
+
               {/* Redirect unknown paths to home */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
@@ -162,6 +181,9 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login onLogin={setSession} />} />
             <Route path="/signup" element={<Signup onSignup={setSession} />} />
+
+
+          
             {/* Redirect unknown paths to login */}
             <Route path="*" element={<Navigate to="/login" />} />
           </Routes>

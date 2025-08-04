@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { sendNotification } from '../utils/sendNotifications';
+import { logAudit } from '../utils/LogAudit';  // Import here
 
 export default function Checkout({ cartItems, user, onOrderPlaced }) {
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,21 @@ export default function Checkout({ cartItems, user, onOrderPlaced }) {
       return;
     }
 
+    // Log the order creation in audit_logs
+    await logAudit({
+      user_id: user.id,
+      action: 'Placed Order',
+      table_name: 'orders',
+      record_id: order.id,
+    });
+
+
+   await sendNotification({
+  user_id: user.id,
+  message: 'Your order has been placed successfully!',
+});
+
+
     const items = cartItems.map((i) => ({
       order_id: order.id,
       product_id: i.id,
@@ -42,7 +59,6 @@ export default function Checkout({ cartItems, user, onOrderPlaced }) {
 
     alert('Order placed!');
 
-    // Clear cart in parent component and localStorage
     if (onOrderPlaced) onOrderPlaced();
 
     setLoading(false);
@@ -54,18 +70,7 @@ export default function Checkout({ cartItems, user, onOrderPlaced }) {
       onClick={handleCheckout}
       disabled={loading}
     >
-      {loading ? (
-        <>
-          <span
-            className="spinner-border spinner-border-sm me-2"
-            role="status"
-            aria-hidden="true"
-          ></span>
-          Placing Order...
-        </>
-      ) : (
-        'Place Order'
-      )}
+      {loading ? 'Placing Order...' : 'Place Order'}
     </button>
   );
 }

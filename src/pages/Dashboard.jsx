@@ -2,12 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import AddProductModal from './Addproductmodal';
 import EditProductModal from './Editproductmodal';
+import { logAudit } from '../utils/LogAudit';  // import audit logger
+import { sendNotification } from '../utils/sendNotifications';
+
 
 const Dashboard = () => {
   const [products, setProducts] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [user, setUser] = useState(null); // track current user
+
+  useEffect(() => {
+    // get current user once
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+  }, []);
 
   const fetchProducts = async () => {
     const { data, error } = await supabase.from('products').select('*');
@@ -20,23 +35,51 @@ const Dashboard = () => {
   }, []);
 
   const handleAddProduct = async (product) => {
-    const { error } = await supabase.from('products').insert([product]);
+    const { data, error } = await supabase.from('products').insert([product]).select().single();
     if (!error) {
       fetchProducts();
       setShowAddModal(false);
+
+      // Log audit after successful insert
+      if (user) {
+        await logAudit({
+          user_id: user.id,
+          action: 'Added Product',
+          table_name: 'products',
+          record_id: data.id,
+        });
+
+
+          await sendNotification({
+          user_id: user.id,
+          message: 'Product Add by' + user.id,
+        });
+      }
     } else {
       alert('Error adding product');
     }
   };
 
   const handleUpdateProduct = async (product) => {
-    const { error } = await supabase
-      .from('products')
-      .update(product)
-      .eq('id', product.id);
+    const { error } = await supabase.from('products').update(product).eq('id', product.id);
     if (!error) {
       fetchProducts();
       setShowEditModal(false);
+
+      // Log audit after successful update
+      if (user) {
+        await logAudit({
+          user_id: user.id,
+          action: 'Updated Product',
+          table_name: 'products',
+          record_id: product.id,
+        });
+
+        await sendNotification({
+          user_id: user.id,
+          message: 'Product update by' + user.id,
+        });
+      }
     } else {
       alert('Error updating product');
     }
@@ -48,6 +91,22 @@ const Dashboard = () => {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (!error) {
       fetchProducts();
+
+      // Log audit after successful delete
+      if (user) {
+        await logAudit({
+          user_id: user.id,
+          action: 'Deleted Product',
+          table_name: 'products',
+          record_id: id,
+        });
+
+
+        await sendNotification({
+          user_id: user.id,
+          message: 'Product delete by' + user.id,
+        });
+      }
     } else {
       alert('Error deleting product');
     }
